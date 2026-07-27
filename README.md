@@ -1,4 +1,4 @@
-# Data Analyst Agent — Phase 1 (happy path)
+# Data Analyst Agent
 
 A self-correcting, multi-dataset SQL data-analyst agent. This is **Phase 1**:
 one thin vertical slice working end-to-end, built to grow into the full system
