@@ -23,17 +23,6 @@ python run.py "What is the average trip duration in minutes?"   # watch it self-
 
 See `DEMO_QUESTIONS.md` for questions that show the self-correction loops in action.
 
-### Offline stub mode vs live
-
-With **no** `ANTHROPIC_API_KEY`, the agent runs in **offline stub mode**: it
-answers the demo questions above deterministically so you can develop the whole
-graph before spending a token. Set a key (copy `.env.example` → `.env`) to
-answer arbitrary questions live:
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-python run.py "average trip distance for cash payments"
-```
 
 ### Real NYC taxi data
 
@@ -122,16 +111,3 @@ LANGSMITH_API_KEY=...
 LANGSMITH_PROJECT=data-agent
 ```
 
-## What's next (from the build plan)
-
-- **Phase 2** ✅ schema inspection
-- **Phase 3** ✅ validator node + `sqlglot` safety checks + LIMIT injection
-- **Phase 4** ✅ self-correction loops (validator→drafter, critic→drafter) with
-  a `max_retries` cap and model escalation
-- **Phase 5** memory: schema cache, session state, query library
-- **Phase 5** ✅ memory: schema cache + query library (`agent/memory.py`)
-- **Phase 6** ✅ eval harness (`evals/run_evals.py`) + LangSmith tracing + scope guard
-- **Phase 8** ✅ FastAPI streaming service (`service/app.py`)
-- **Phase 9** ✅ live-streaming showcase UI (`service/static/index.html`)
-- **Phase 10** ✅ multi-dataset + CSV upload (`data/registry.py`)
-- **Phase 11** deploy: `Dockerfile` provided — see `RUNBOOK.md` step 7
