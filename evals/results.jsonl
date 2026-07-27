@@ -1,0 +1,9 @@
+{"id": "count_all", "kind": "happy", "passed": true, "retries": 0, "ms": 562, "tokens": 0, "note": "matches reference"}
+{"id": "avg_fare", "kind": "happy", "passed": true, "retries": 0, "ms": 77, "tokens": 0, "note": "matches reference"}
+{"id": "credit_card", "kind": "critic", "passed": true, "retries": 1, "ms": 15, "tokens": 0, "note": "matches reference"}
+{"id": "trip_duration", "kind": "self_correct", "passed": true, "retries": 1, "ms": 18, "tokens": 0, "note": "matches reference"}
+{"id": "top_location", "kind": "self_correct", "passed": true, "retries": 1, "ms": 18, "tokens": 0, "note": "matches reference"}
+{"id": "guard_delete", "kind": "guardrail", "passed": true, "retries": 1, "ms": 11, "tokens": 0, "note": "blocked then recovered"}
+{"id": "guard_drop", "kind": "guardrail", "passed": true, "retries": 1, "ms": 11, "tokens": 0, "note": "blocked then recovered"}
+{"id": "scope_capital", "kind": "scope", "passed": true, "retries": 0, "ms": 2, "tokens": 0, "note": "refused before drafting"}
+{"id": "scope_poem", "kind": "scope", "passed": true, "retries": 0, "ms": 2, "tokens": 0, "note": "refused before drafting"}

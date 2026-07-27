@@ -1,0 +1,17 @@
+[
+  {
+    "dataset_id": "ecommerce",
+    "question": "How many rows per category?",
+    "sql": "SELECT category, COUNT(*) AS row_count FROM orders GROUP BY category ORDER BY row_count DESC LIMIT 100"
+  },
+  {
+    "dataset_id": "ecommerce",
+    "question": "what is this data about?",
+    "sql": "SELECT 'orders' AS table_name, column_name, data_type FROM information_schema.columns WHERE table_name = 'orders' ORDER BY ordinal_position LIMIT 20"
+  },
+  {
+    "dataset_id": "upload_citywide_mobility_survey_vehicle_2024_20",
+    "question": "What is the minimum vehicle num?",
+    "sql": "SELECT MIN(vehicle_num) AS min_vehicle_num FROM data LIMIT 1"
+  }
+]

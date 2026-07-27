@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DATA AGENT // TERMINAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#050810; --bg2:#070c18;
+    --panel:rgba(9,18,34,.62); --panel-solid:#0a1322;
+    --line:rgba(56,189,248,.28); --line-bright:rgba(56,189,248,.6);
+    --cyan:#22d3ee; --blue:#38bdf8; --magenta:#f472b6;
+    --text:#cdeffd; --muted:#5f7f96; --faint:#3a5266;
+    --ok:#39ffb0; --work:#ffb000; --block:#ff4d6d; --retry:#c084fc;
+    --glow-cyan:0 0 14px rgba(34,211,238,.55); --glow-ok:0 0 14px rgba(57,255,176,.5);
+    --glow-block:0 0 14px rgba(255,77,109,.5); --glow-retry:0 0 14px rgba(192,132,252,.5);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;min-height:100vh;color:var(--text);
+    font-family:"Share Tech Mono",monospace;line-height:1.55;
+    background:var(--void);position:relative;overflow-x:hidden}
+
+  /* animated perspective grid */
+  .grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:
+      linear-gradient(rgba(56,189,248,.10) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56,189,248,.10) 1px, transparent 1px);
+    background-size:42px 42px;
+    -webkit-mask-image:radial-gradient(1100px 700px at 50% 0%, #000 20%, transparent 78%);
+            mask-image:radial-gradient(1100px 700px at 50% 0%, #000 20%, transparent 78%);
+    animation:drift 14s linear infinite}
+  @keyframes drift{from{background-position:0 0}to{background-position:42px 84px}}
+  .glow-orb{position:fixed;z-index:0;pointer-events:none;border-radius:50%;filter:blur(90px);opacity:.35}
+  .glow-orb.a{width:520px;height:520px;top:-220px;left:-140px;background:var(--blue)}
+  .glow-orb.b{width:460px;height:460px;top:-160px;right:-160px;background:var(--magenta)}
+  /* scanlines */
+  .scan{position:fixed;inset:0;z-index:40;pointer-events:none;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px,
+      rgba(140,220,255,.028) 3px, rgba(0,0,0,0) 4px);
+    mix-blend-mode:overlay}
+  .scan::after{content:"";position:absolute;left:0;right:0;height:120px;
+    background:linear-gradient(rgba(56,189,248,0), rgba(56,189,248,.05) 45%, rgba(56,189,248,0));
+    animation:sweep 6s linear infinite}
+  @keyframes sweep{from{top:-120px}to{top:100%}}
+  @media (prefers-reduced-motion:reduce){.grid-bg,.scan::after{animation:none}}
+
+  a{color:var(--cyan);text-decoration:none} a:hover{text-decoration:underline}
+  ::selection{background:rgba(34,211,238,.35)}
+  .wrap{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:26px 22px 90px}
+
+  header{display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap;
+    padding-bottom:18px;border-bottom:1px solid var(--line)}
+  .logo{width:40px;height:40px;position:relative;border:1.5px solid var(--cyan);
+    border-radius:3px;box-shadow:var(--glow-cyan);
+    background:conic-gradient(from 0deg,var(--cyan),var(--magenta),var(--cyan));
+    -webkit-mask:radial-gradient(circle at 50% 50%, transparent 6px, #000 7px);
+            mask:radial-gradient(circle at 50% 50%, transparent 6px, #000 7px);
+    animation:spin 5s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  h1{font-family:Orbitron;font-size:20px;font-weight:800;margin:0;letter-spacing:.06em;
+    color:#eafcff;text-shadow:0 0 18px rgba(34,211,238,.45)}
+  h1 span{color:var(--cyan)}
+  .pills{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+  .pill{font-family:"JetBrains Mono";font-size:11px;font-weight:500;padding:5px 11px;
+    border-radius:3px;background:var(--panel);border:1px solid var(--line);color:var(--muted);
+    display:flex;align-items:center;gap:7px;letter-spacing:.04em;backdrop-filter:blur(6px)}
+  .pill .led{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+  .pill.on{color:var(--ok);border-color:rgba(57,255,176,.4)} .pill.on .led{background:var(--ok);box-shadow:var(--glow-ok)}
+  .pill.off{color:var(--block);border-color:rgba(255,77,109,.4)} .pill.off .led{background:var(--block);box-shadow:var(--glow-block)}
+
+  .banner{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.4);color:#ffb3c1;
+    padding:12px 16px;border-radius:4px;margin-bottom:18px;font-size:13.5px;display:none}
+  .banner.show{display:block}
+
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:22px;align-items:start}
+
+  /* HUD panel with corner brackets */
+  .card{position:relative;background:var(--panel);backdrop-filter:blur(10px);
+    border:1px solid var(--line);border-radius:6px;padding:20px;
+    box-shadow:0 0 0 1px rgba(0,0,0,.4), 0 20px 50px -30px rgba(34,211,238,.25)}
+  .card::before,.card::after{content:"";position:absolute;width:14px;height:14px;
+    border:1.5px solid var(--cyan);opacity:.8}
+  .card::before{top:-1px;left:-1px;border-right:none;border-bottom:none}
+  .card::after{bottom:-1px;right:-1px;border-left:none;border-top:none}
+  .card h2{font-family:Orbitron;font-size:12px;font-weight:700;margin:0 0 14px;
+    text-transform:uppercase;letter-spacing:.14em;color:var(--cyan);
+    display:flex;align-items:center;gap:8px}
+  .card h2::before{content:"";width:6px;height:6px;background:var(--cyan);
+    box-shadow:var(--glow-cyan);display:inline-block}
+
+  label{display:block;font-family:"JetBrains Mono";font-size:11px;font-weight:500;
+    color:var(--muted);margin:0 0 7px;letter-spacing:.06em;text-transform:uppercase}
+  select,textarea,input[type=text]{width:100%;border:1px solid var(--line);border-radius:3px;
+    padding:11px 12px;font-family:"Share Tech Mono";font-size:14.5px;color:var(--text);
+    background:#050a14}
+  textarea{min-height:84px;resize:vertical}
+  select:focus,textarea:focus,input:focus{outline:1.5px solid var(--cyan);
+    outline-offset:1px;border-color:transparent;box-shadow:var(--glow-cyan)}
+  .field{margin-bottom:16px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+  .chip{font-family:"JetBrains Mono";font-size:11.5px;color:var(--muted);
+    border:1px solid var(--line);background:rgba(56,189,248,.05);border-radius:3px;
+    padding:6px 10px;cursor:pointer;text-align:left;transition:.15s}
+  .chip:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:var(--glow-cyan)}
+  button.run{width:100%;margin-top:2px;border:1px solid var(--cyan);border-radius:3px;
+    padding:13px;font-family:Orbitron;font-weight:700;font-size:13.5px;letter-spacing:.1em;
+    color:#04141a;cursor:pointer;background:var(--cyan);
+    box-shadow:var(--glow-cyan);text-transform:uppercase}
+  button.run:hover{filter:brightness(1.12)}
+  button.run:disabled{opacity:.4;cursor:progress;box-shadow:none}
+  .upload{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line);
+    font-size:12.5px;color:var(--muted)}
+  .upload input[type=file]{font-size:11px;margin-top:8px;color:var(--muted);font-family:"JetBrains Mono"}
+  .btn-ghost-full{width:100%;margin-top:12px;background:transparent;color:var(--cyan);
+    border:1px solid var(--line);border-radius:3px;padding:11px;font-family:Orbitron;
+    font-weight:700;font-size:12px;letter-spacing:.08em;cursor:pointer;text-transform:uppercase}
+  .btn-ghost-full:hover{border-color:var(--cyan);box-shadow:var(--glow-cyan)}
+
+  /* node-flow graph */
+  .graph svg{width:100%;height:auto;display:block}
+  .nlabel{font-family:Orbitron;font-size:12px;font-weight:700;fill:var(--muted);letter-spacing:.04em}
+  .nbox{fill:rgba(6,14,26,.7);stroke:var(--line);stroke-width:1.4}
+  .edge{stroke:rgba(56,189,248,.35);stroke-width:1.6;fill:none}
+  .edge.loop{stroke:rgba(192,132,252,.45);stroke-dasharray:4 5}
+  .elabel{font-family:"JetBrains Mono";font-size:9.5px;fill:var(--faint);letter-spacing:.05em}
+  .node.active .nbox{fill:rgba(34,211,238,.12);stroke:var(--cyan);stroke-width:2;
+    filter:drop-shadow(0 0 8px rgba(34,211,238,.85))}
+  .node.active .nlabel{fill:var(--cyan)}
+  .node.done .nbox{fill:rgba(57,255,176,.08);stroke:var(--ok)} .node.done .nlabel{fill:var(--ok)}
+  .node.block .nbox{fill:rgba(255,77,109,.1);stroke:var(--block);
+    filter:drop-shadow(0 0 8px rgba(255,77,109,.7))} .node.block .nlabel{fill:var(--block)}
+  .node.retry .nbox{fill:rgba(192,132,252,.1);stroke:var(--retry);
+    filter:drop-shadow(0 0 8px rgba(192,132,252,.7))} .node.retry .nlabel{fill:var(--retry)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .node.active{animation:pulse .9s ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){.node.active{animation:none}}
+
+  /* answer + ledger */
+  .answer{position:relative;background:rgba(57,255,176,.06);
+    border:1px solid rgba(57,255,176,.45);border-radius:6px;padding:18px 20px;margin:18px 0;
+    display:none;box-shadow:0 0 30px -10px rgba(57,255,176,.3)}
+  .answer.show{display:block}
+  .answer .k{font-family:Orbitron;font-size:11px;font-weight:700;letter-spacing:.14em;
+    color:var(--ok);text-transform:uppercase;margin-bottom:6px}
+  .answer .v{font-size:17px;white-space:pre-wrap;color:#eafff5}
+  .answer .meta{margin-top:10px;font-family:"JetBrains Mono";font-size:11.5px;color:var(--muted)}
+
+  .empty{color:var(--faint);font-size:13px;padding:30px 4px;text-align:center;
+    font-family:"JetBrains Mono";letter-spacing:.04em}
+  .step{display:grid;grid-template-columns:20px 1fr;gap:13px;padding:12px 0;
+    border-bottom:1px solid rgba(56,189,248,.14);animation:rise .22s ease both}
+  @keyframes rise{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.step{animation:none}}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--work);margin-top:5px;
+    box-shadow:0 0 8px rgba(255,176,0,.6)}
+  .step.ok .dot{background:var(--ok);box-shadow:var(--glow-ok)}
+  .step.block .dot{background:var(--block);box-shadow:var(--glow-block)}
+  .step.retry .dot{background:var(--retry);box-shadow:var(--glow-retry)}
+  .step .name{font-family:Orbitron;font-size:11px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center}
+  .tag{font-family:"JetBrains Mono";font-size:10px;padding:2px 6px;border-radius:3px;
+    background:rgba(192,132,252,.12);color:var(--retry);letter-spacing:0;text-transform:none;
+    border:1px solid rgba(192,132,252,.3)}
+  .detail{margin-top:5px;font-size:13.5px;white-space:pre-wrap;color:var(--text)}
+  pre.sql{font-family:"JetBrains Mono";font-size:12.5px;background:#040910;
+    border:1px solid var(--line);border-radius:4px;padding:10px 12px;margin:7px 0 0;
+    overflow-x:auto;color:var(--cyan)}
+
+  /* langsmith panel */
+  .ls-run{border:1px solid var(--line);border-radius:4px;padding:10px 12px;margin-bottom:9px;
+    font-size:12.5px;background:rgba(56,189,248,.03)}
+  .ls-run .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .ls-run .nm{font-weight:500;color:var(--text)}
+  .ls-run .mono{font-family:"JetBrains Mono";font-size:10.5px;color:var(--muted)}
+  .ls-note{font-size:12.5px;color:var(--muted)}
+  .dot-live{width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block;
+    margin-right:6px;animation:pulse 1.2s infinite;box-shadow:var(--glow-ok)}
+
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(2,6,14,.82);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .overlay.show{display:flex}
+  .modal{position:relative;background:var(--panel-solid);border:1px solid var(--line);
+    border-radius:6px;max-width:440px;width:100%;padding:26px;box-shadow:var(--glow-cyan)}
+  .modal::before,.modal::after{content:"";position:absolute;width:16px;height:16px;
+    border:1.5px solid var(--cyan)}
+  .modal::before{top:-1px;left:-1px;border-right:none;border-bottom:none}
+  .modal::after{bottom:-1px;right:-1px;border-left:none;border-top:none}
+  .modal .icon{width:44px;height:44px;border-radius:4px;background:rgba(255,77,109,.12);
+    border:1px solid rgba(255,77,109,.4);display:flex;align-items:center;justify-content:center;
+    font-size:20px;margin-bottom:14px}
+  .modal h3{font-family:Orbitron;margin:0 0 8px;font-size:16px;color:#fff;letter-spacing:.03em}
+  .modal p{margin:0 0 18px;color:var(--muted);font-size:13.5px}
+  .modal .actions{display:flex;gap:10px}
+  .btn{border:0;border-radius:3px;padding:11px 16px;font-family:Orbitron;
+    font-weight:700;font-size:12.5px;cursor:pointer;letter-spacing:.05em;text-transform:uppercase}
+  .btn.primary{background:var(--cyan);color:#04141a;box-shadow:var(--glow-cyan)}
+  .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+
+  .modal.wide{max-width:640px;max-height:82vh;overflow-y:auto}
+  .ds-sec{margin-bottom:18px}
+  .ds-sec label{font-size:11px;font-weight:500;color:var(--muted);margin-bottom:8px}
+  .ds-list{display:flex;flex-direction:column;gap:8px}
+  .ds-item{display:flex;align-items:center;gap:10px;border:1px solid var(--line);
+    border-radius:4px;padding:10px 12px;font-size:13px;background:rgba(56,189,248,.03)}
+  .ds-item .meta{color:var(--muted);font-size:11px;font-family:"JetBrains Mono"}
+  .ds-item .grow{flex:1;min-width:0}
+  .ds-item .grow b{font-weight:500;color:var(--text)}
+  .ds-item .go{border:1px solid var(--line);border-radius:3px;padding:8px 13px;
+    font-family:Orbitron;font-weight:700;font-size:11px;cursor:pointer;
+    background:rgba(34,211,238,.08);color:var(--cyan);white-space:nowrap;letter-spacing:.04em}
+  .ds-item a.go{text-decoration:none}
+  .ds-item .go:hover{background:rgba(34,211,238,.18);box-shadow:var(--glow-cyan)}
+
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="glow-orb a"></div>
+<div class="glow-orb b"></div>
+<div class="scan"></div>
+
+<div class="wrap">
+  <header>
+    <div class="logo"></div>
+    <h1>DATA<span>::</span>AGENT</h1>
+    <div class="pills">
+      <span class="pill" id="pillMode"><span class="led"></span><span>checking…</span></span>
+      <span class="pill" id="pillTrace"><span class="led"></span><span>tracing</span></span>
+    </div>
+  </header>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>Query Console</h2>
+        <div class="field">
+          <label for="dataset">Target dataset</label>
+          <select id="dataset"></select>
+        </div>
+        <div class="field">
+          <label for="q">Question</label>
+          <textarea id="q" placeholder="e.g. Which hour of day has the highest average tip?"></textarea>
+          <div class="chips" id="chips"></div>
+        </div>
+        <button class="run" id="run">▸ Execute query</button>
+        <div class="upload">
+          Upload a CSV — schema auto-discovered.
+          <input type="file" id="file" accept=".csv" />
+          <button class="btn-ghost-full" id="browseDs">⛁ Browse real datasets</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:20px">
+        <h2><span class="dot-live"></span>LangSmith Uplink</h2>
+        <div id="lsBody"><div class="ls-note">Checking tracing…</div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card graph">
+        <h2>Pipeline — live trace</h2>
+        <svg viewBox="0 0 900 250" id="flow" role="img" aria-label="Agent pipeline flow">
+          <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#3b6b82" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+          <line class="edge" x1="190" y1="59" x2="248" y2="59" marker-end="url(#ah)"/>
+          <line class="edge" x1="400" y1="59" x2="458" y2="59" marker-end="url(#ah)"/>
+          <line class="edge" x1="610" y1="59" x2="668" y2="59" marker-end="url(#ah)"/>
+          <line class="edge" x1="745" y1="83" x2="745" y2="163" marker-end="url(#ah)"/>
+          <line class="edge" x1="668" y1="189" x2="610" y2="189" marker-end="url(#ah)"/>
+          <line class="edge" x1="458" y1="189" x2="400" y2="189" marker-end="url(#ah)"/>
+          <path class="edge loop" d="M712 35 C702 8 572 8 560 33" marker-end="url(#ah)"/>
+          <text class="elabel" x="618" y="14">RETRY</text>
+          <path class="edge loop" d="M500 163 L500 87" marker-end="url(#ah)"/>
+          <text class="elabel" x="506" y="128">RETRY</text>
+          <g class="node" id="n-schema"><rect class="nbox" x="40" y="35" width="150" height="48" rx="4"/><text class="nlabel" x="115" y="63" text-anchor="middle">SCHEMA</text></g>
+          <g class="node" id="n-planner"><rect class="nbox" x="250" y="35" width="150" height="48" rx="4"/><text class="nlabel" x="325" y="63" text-anchor="middle">PLAN</text></g>
+          <g class="node" id="n-drafter"><rect class="nbox" x="460" y="35" width="150" height="48" rx="4"/><text class="nlabel" x="535" y="63" text-anchor="middle">DRAFT SQL</text></g>
+          <g class="node" id="n-validator"><rect class="nbox" x="670" y="35" width="150" height="48" rx="4"/><text class="nlabel" x="745" y="63" text-anchor="middle">VALIDATE</text></g>
+          <g class="node" id="n-executor"><rect class="nbox" x="670" y="165" width="150" height="48" rx="4"/><text class="nlabel" x="745" y="193" text-anchor="middle">EXECUTE</text></g>
+          <g class="node" id="n-critic"><rect class="nbox" x="460" y="165" width="150" height="48" rx="4"/><text class="nlabel" x="535" y="193" text-anchor="middle">CRITIQUE</text></g>
+          <g class="node" id="n-summarizer"><rect class="nbox" x="250" y="165" width="150" height="48" rx="4"/><text class="nlabel" x="325" y="193" text-anchor="middle">ANSWER</text></g>
+        </svg>
+      </div>
+
+      <div class="answer" id="answer">
+        <div class="k">▸ Answer</div>
+        <div class="v" id="answerText"></div>
+        <div class="meta" id="answerMeta"></div>
+      </div>
+
+      <div class="card">
+        <h2>Reasoning log</h2>
+        <div id="ledger"><div class="empty">// awaiting query — reasoning stream will render here</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dsOverlay">
+  <div class="modal wide">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <h3 style="margin:0">Real dataset uplink</h3>
+      <button class="btn ghost" style="margin-left:auto;padding:7px 12px" onclick="document.getElementById('dsOverlay').classList.remove('show')">Close</button>
+    </div>
+    <p style="margin:0 0 16px">Load a public dataset by URL, pick a ready-made one, or explore a catalog and upload its CSV.</p>
+    <div class="ds-sec">
+      <label>Load from a URL (CSV or Parquet)</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="dsUrl" placeholder="https://…/data.csv" style="flex:1">
+        <button class="btn primary" id="dsUrlBtn">Load</button>
+      </div>
+      <div id="dsUrlMsg" class="ls-note" style="margin-top:8px"></div>
+    </div>
+    <div class="ds-sec">
+      <label>One-click sample datasets</label>
+      <div id="dsSamples" class="ds-list"></div>
+    </div>
+    <div class="ds-sec">
+      <label>Explore catalogs</label>
+      <div id="dsCatalogs" class="ds-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="icon">⚠</div>
+    <h3 id="mTitle">Something needs attention</h3>
+    <p id="mMsg"></p>
+    <div class="actions">
+      <a class="btn primary" id="mMail" href="#">Email Srujan</a>
+      <button class="btn ghost" onclick="document.getElementById('overlay').classList.remove('show')">Dismiss</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const STEP2NODE = {schema:"n-schema",plan:"n-planner",
+  draft_sql:"n-drafter",validate:"n-validator",execute:"n-executor",
+  critic:"n-critic",summarize:"n-summarizer",final:"n-summarizer"};
+const NAMES = {schema:"Inspect schema",plan:"Plan",
+  draft_sql:"Draft SQL",validate:"Validate",execute:"Execute",
+  critic:"Critique",summarize:"Answer",final:"Answer",error:"Error"};
+const ledger=$("#ledger"), answer=$("#answer");
+let contact="srujan.nalam@gmail.com";
+
+function statusOf(step){
+  const d=(step.detail||"").toString();
+  if(step.step==="validate" && d.includes("BLOCKED")) return "block";
+  if(step.step==="execute" && d.startsWith("error")) return "block";
+  if(step.step==="critic" && /^(bad|suspect)/.test(d)) return "retry";
+  if(step.step==="draft_sql" && d.includes("[retry")) return "retry";
+  if(step.step==="error") return "block";
+  if(step.step==="final" || (step.step==="critic"&&d.startsWith("ok"))) return "ok";
+  return "";
+}
+function resetGraph(){
+  document.querySelectorAll("#flow .node").forEach(n=>n.setAttribute("class","node"));
+}
+function markNode(step){
+  const id=STEP2NODE[step.step]; if(!id) return;
+  document.querySelectorAll("#flow .node.active").forEach(n=>{
+    n.classList.remove("active");
+    if(!n.classList.contains("block")&&!n.classList.contains("retry")) n.classList.add("done");
+  });
+  const node=document.getElementById(id); if(!node) return;
+  node.classList.remove("done","block","retry");
+  const st=statusOf(step);
+  if(st==="block") node.classList.add("block");
+  else if(st==="retry") node.classList.add("retry");
+  node.classList.add("active");
+}
+function addStep(step){
+  if(ledger.querySelector(".empty")) ledger.innerHTML="";
+  let detail=(step.detail||"").toString(), tag="";
+  const m=detail.match(/\s*\[retry (\d+),\s*([a-z0-9]+)\]/i);
+  if(m){tag=`retry ${m[1]} · ${m[2]}`;detail=detail.replace(m[0],"");}
+  const isSql=step.step==="draft_sql";
+  const el=document.createElement("div");
+  el.className="step "+statusOf(step);
+  el.innerHTML=`<div><div class="dot"></div></div><div>
+    <div class="name">${NAMES[step.step]||step.step}${tag?`<span class="tag">${tag}</span>`:""}</div>
+    ${isSql?`<pre class="sql"></pre>`:`<div class="detail"></div>`}</div>`;
+  el.querySelector(isSql?"pre":".detail").textContent=detail;
+  ledger.appendChild(el);
+}
+function showError(step){
+  $("#mTitle").textContent = step.kind==="credits" ? "API credits ran out"
+    : step.kind==="no_key" ? "Agent not configured"
+    : step.kind==="auth" ? "API key problem" : "Something went wrong";
+  $("#mMsg").textContent = step.detail;
+  const to = step.contact || contact;
+  $("#mMail").href = `mailto:${to}?subject=Data%20Analyst%20Agent%20%E2%80%94%20API%20credits`;
+  $("#overlay").classList.add("show");
+}
+
+let es=null;
+function ask(){
+  const q=$("#q").value.trim(); if(!q) return;
+  if(es) es.close();
+  ledger.innerHTML=""; answer.classList.remove("show"); resetGraph();
+  $("#run").disabled=true; $("#run").textContent="Running…";
+  es=new EventSource(`/api/stream?q=${encodeURIComponent(q)}&dataset=${encodeURIComponent($("#dataset").value)}`);
+  es.onmessage=e=>{
+    const step=JSON.parse(e.data);
+    if(step.step==="error"){ showError(step); return; }
+    if(step.step==="final"){
+      markNode(step);
+      $("#answerText").textContent=step.detail;
+      $("#answerMeta").textContent=`tokens: ${step.tokens ?? 0}`;
+      answer.classList.add("show");
+    } else { markNode(step); addStep(step); }
+  };
+  const stop=()=>{es.close();$("#run").disabled=false;$("#run").textContent="▸ Execute query";
+    document.querySelectorAll("#flow .node.active").forEach(n=>n.classList.remove("active"));
+    loadLangsmith();};
+  es.addEventListener("done",stop);
+  es.onerror=stop;
+}
+
+async function loadDatasets(sel){
+  const j=await (await fetch("/api/datasets")).json();
+  contact=j.contact||contact;
+  const dd=$("#dataset"); dd.innerHTML="";
+  j.datasets.forEach(d=>{const o=document.createElement("option");o.value=d.id;o.textContent=d.label;dd.appendChild(o);});
+  if(sel) dd.value=sel;
+  const pm=$("#pillMode");
+  pm.className="pill "+(j.configured?"on":"off");
+  pm.querySelector("span:last-child").textContent=j.configured?"live":"not configured";
+  const pt=$("#pillTrace");
+  pt.className="pill "+(j.tracing?"on":"off");
+  pt.querySelector("span:last-child").textContent=j.tracing?"tracing on":"tracing off";
+  const b=$("#banner");
+  if(!j.configured){ b.classList.add("show");
+    b.innerHTML=`The agent isn't configured with a working API key. Please contact <a href="mailto:${contact}">${contact}</a> to enable it.`;
+    $("#run").disabled=true;
+  } else { b.classList.remove("show"); $("#run").disabled=false; }
+}
+
+async function loadLangsmith(){
+  const box=$("#lsBody");
+  try{
+    const j=await (await fetch("/api/langsmith/runs")).json();
+    if(!j.configured){ box.innerHTML=`<div class="ls-note">Tracing offline. Set <span class="mono">LANGSMITH_TRACING</span>, <span class="mono">LANGSMITH_API_KEY</span> and <span class="mono">LANGSMITH_PROJECT</span> to enable live traces.</div>`; return; }
+    let html="";
+    if(j.project_url) html+=`<div style="margin-bottom:10px"><a href="${j.project_url}" target="_blank">Open project in LangSmith ↗</a></div>`;
+    if(!j.runs || !j.runs.length){ html+=`<div class="ls-note">No runs yet — ask a question and it appears here.</div>`; }
+    else j.runs.forEach(r=>{
+      const lat=r.latency!=null?`${r.latency}s`:"";
+      const tok=r.tokens!=null?`${r.tokens} tok`:"";
+      const nm=r.url?`<a href="${r.url}" target="_blank">${r.name} ↗</a>`:r.name;
+      html+=`<div class="ls-run"><div class="top"><span class="nm">${nm}</span>
+        <span class="mono">${r.status||""}</span></div>
+        <div class="mono">${[lat,tok].filter(Boolean).join(" · ")}</div></div>`;
+    });
+    box.innerHTML=html;
+  }catch(e){ box.innerHTML=`<div class="ls-note">Uplink to LangSmith failed.</div>`; }
+}
+
+$("#file").addEventListener("change",async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const fd=new FormData(); fd.append("file",f); $("#file").disabled=true;
+  const j=await (await fetch("/api/upload",{method:"POST",body:fd})).json();
+  $("#file").disabled=false;
+  if(j.id){ await loadDatasets(j.id); await loadSuggestions(); $("#q").placeholder="Ask about "+j.label; }
+});
+$("#run").addEventListener("click",ask);
+$("#q").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey))ask();});
+
+// ---- real datasets browser (a few simple, working options) ----
+const SAMPLES = [
+  {name:"Seattle Weather", meta:"daily weather · 1.5k rows",
+   url:"https://raw.githubusercontent.com/vega/vega-datasets/main/data/seattle-weather.csv"},
+  {name:"S&P 500", meta:"monthly index prices",
+   url:"https://raw.githubusercontent.com/vega/vega-datasets/main/data/sp500.csv"},
+  {name:"US Births 2000–2014", meta:"daily births · FiveThirtyEight",
+   url:"https://raw.githubusercontent.com/fivethirtyeight/data/master/births/US_births_2000-2014_SSA.csv"},
+];
+const CATALOGS = [
+  {name:"Kaggle Datasets", meta:"huge community catalog", url:"https://www.kaggle.com/datasets"},
+  {name:"data.gov", meta:"US government open data", url:"https://catalog.data.gov/dataset"},
+  {name:"Hugging Face Datasets", meta:"ML datasets", url:"https://huggingface.co/datasets"},
+];
+
+async function loadUrl(url, name, btn){
+  const msg=$("#dsUrlMsg");
+  if(btn){ btn.disabled=true; btn.textContent="Loading…"; }
+  msg.textContent="Downloading and discovering schema…";
+  try{
+    const j=await (await fetch("/api/load_url",{method:"POST",
+      headers:{"Content-Type":"application/json"},body:JSON.stringify({url,name})})).json();
+    if(j.id){
+      await loadDatasets(j.id); await loadSuggestions();
+      $("#q").placeholder="Ask about "+j.label;
+      $("#dsOverlay").classList.remove("show");
+    } else { msg.textContent = j.error || "Could not load that dataset."; }
+  }catch(e){ msg.textContent="Could not load that dataset."; }
+  finally{ if(btn){ btn.disabled=false; btn.textContent="Load"; } }
+}
+
+function buildBrowser(){
+  const s=$("#dsSamples"); s.innerHTML="";
+  SAMPLES.forEach(d=>{
+    const row=document.createElement("div"); row.className="ds-item";
+    row.innerHTML=`<div class="grow"><b>${d.name}</b><div class="meta">${d.meta}</div></div>
+      <button class="go">Load</button>`;
+    row.querySelector(".go").onclick=(e)=>loadUrl(d.url,d.name+".csv",e.target);
+    s.appendChild(row);
+  });
+  const cat=$("#dsCatalogs"); cat.innerHTML="";
+  CATALOGS.forEach(d=>{
+    const row=document.createElement("div"); row.className="ds-item";
+    row.innerHTML=`<div class="grow"><b>${d.name}</b><div class="meta">${d.meta}</div></div>
+      <a class="go" href="${d.url}" target="_blank" rel="noopener">Open ↗</a>`;
+    cat.appendChild(row);
+  });
+}
+async function loadSuggestions(){
+  const chips=$("#chips"); chips.innerHTML="";
+  try{
+    const j=await (await fetch(`/api/suggestions?dataset=${encodeURIComponent($("#dataset").value)}`)).json();
+    (j.suggestions||[]).forEach(x=>{
+      const b=document.createElement("button"); b.className="chip"; b.textContent=x;
+      b.onclick=()=>{$("#q").value=x;}; chips.appendChild(b);
+    });
+  }catch(e){}
+}
+$("#dataset").addEventListener("change", loadSuggestions);
+
+$("#browseDs").addEventListener("click",()=>{ buildBrowser();
+  $("#dsUrlMsg").textContent=""; $("#dsOverlay").classList.add("show"); });
+$("#dsUrlBtn").addEventListener("click",e=>{
+  const u=$("#dsUrl").value.trim(); if(u) loadUrl(u,null,e.target); });
+
+loadDatasets().then(loadSuggestions); loadLangsmith(); setInterval(loadLangsmith, 6000);
+</script>
+</body>
+</html>

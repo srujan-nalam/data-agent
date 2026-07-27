@@ -1,0 +1,20 @@
+[project]
+name = "data-agent"
+version = "0.1.0"
+description = "Self-correcting, multi-dataset SQL data-analyst agent"
+requires-python = ">=3.10"
+dependencies = [
+    "duckdb>=1.0",
+    "sqlglot>=25.0",
+    "pydantic>=2.0",
+    "langgraph>=0.2",
+    "anthropic>=0.40",
+    "python-dotenv>=1.0",
+    "langsmith>=0.1",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "python-multipart>=0.0.9",
+]
+
+[tool.setuptools]
+packages = ["agent", "agent.nodes", "data", "service"]
